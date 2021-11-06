@@ -33,18 +33,42 @@ def menu(message):
     bot.send_message(message.chat.id, "Выберите действие: ", reply_markup=menu_markup)
 
 
-def condition_yes(message):
-    bot.send_message(message.chat.id, "yes bla bla")
+def next_story(message):
+    action_markup = types.InlineKeyboardMarkup()
+    action_markup.add(types.InlineKeyboardButton(text="Оставить отзыв", callback_data="feedback"))
+    action_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
+
+    bot.send_message(message.chat.id, "Дальше!")
+    time.sleep(1)
+    bot.send_message(message.chat.id, "Исторически так сложилось, что Сквот - это заброшенное помещение/здание/"
+                                      "территория, куда поселились люди, молодые и амбициозные. Они притягивают близких"
+                                      " по творческому духу людей и создают различные интересные места, устраивают "
+                                      "вечеринки и выставки, к тому же еще и живут там.")
+    time.sleep(15)
+    bot.send_message(message.chat.id, "У нас конечно же все законно и ничего мы не захватывали. Наш сквоттер оказался "
+                                      "любителем рока и хороших вкусных кальянов ;)\n\nМы постарались и создали для вас"
+                                      " атмосферу уютного рокерского домика, в который с радостью примем любого, "
+                                      "кто захочет стать частью нашей семьи.")
+    time.sleep(1)
+    bot.send_message(message.chat.id, "Мы ценим открытость и обратную связь, поэтому, если тебе не трудно, "
+                                      "оставь нам отзыв) ")
+    time.sleep(1)
+    bot.send_message(message.chat.id, "Выберите действие: ", reply_markup=action_markup)
 
 
-def condition_no(message):
-    bot.send_message(message.chat.id, "bla bla no")
+# НЕОБХОДИМО НАПИСАТЬ РЕГИСТРАТОР ОТВЕТА!!
+def leave_feedback(message):
+    bot.send_message(message.chat.id, "Напишите, что о нас думаете!")
+
+
+def back_to_menu(message):
+    menu(message)
 
 
 def squat(message):
     condition_markup = types.InlineKeyboardMarkup()
-    condition_markup.add(types.InlineKeyboardButton(text="Да", callback_data="cond_yes"))
-    condition_markup.add(types.InlineKeyboardButton(text="Нет", callback_data="cond_no"))
+    condition_markup.add(types.InlineKeyboardButton(text="Дальше", callback_data="next"))
+    condition_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
 
     bot.send_message(message.chat.id, 'Привет, и добро пожаловать в "Сквот"')
     time.sleep(1)
@@ -55,15 +79,22 @@ def squat(message):
 
 
 def contact(message):
-    bot.send_message(message.chat.id, "Напишите @razrabot")
+    back_to_menu_markup = types.InlineKeyboardMarkup()
+    back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
+
+    bot.send_message(message.chat.id, "Напишите @razrabot", reply_markup=back_to_menu_markup)
 
 
+# НЕОБХОДИМО НАПИСАТЬ РЕГИСТРАТОР ОТВЕТА!!
 def reserve(message):
     bot.send_message(message.chat.id, "На какое имя забронировать?")
 
 
 def menu_picture(message):
     bot.send_message(message.chat.id, "Меню")
+    bot.send_photo(message.chat.id, photo=open(r"C:\Users\danya\Desktop\Работа\Чат-боты\work_bot\2.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"C:\Users\danya\Desktop\Работа\Чат-боты\work_bot\3.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"C:\Users\danya\Desktop\Работа\Чат-боты\work_bot\5.jpg", 'rb'))
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -76,10 +107,12 @@ def query_handler(call):
         reserve(call.message)
     elif call.data == 'menu_button':
         menu_picture(call.message)
-    elif call.data == 'cond_yes':
-        condition_yes(call.message)
-    elif call.data == 'cond_no':
-        condition_no(call.message)
+    elif call.data == 'next':
+        next_story(call.message)
+    elif call.data == 'back_to_menu':
+        back_to_menu(call.message)
+    elif call.data == 'feedback':
+        leave_feedback(call.message)
 
 
 bot.infinity_polling()
