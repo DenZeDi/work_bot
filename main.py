@@ -13,6 +13,12 @@ class User:
         self.username = username
 
 
+# Connection to google spreadsheet
+gc = gspread.service_account(filename='credentials.json')
+sh = gc.open_by_key('1WmRFckXhQIPeZ7-qKUNKCPgluCg828LwSAc7APsiHRc')
+# worksheet = sh.worksheet("Брони сегодня")
+
+
 @bot.message_handler(commands=['start'])
 def welcome_message(message):
     bot.send_message(message.chat.id, "Привет, меня зовут Хука, я чат-бот кальянной Сквот.")
@@ -86,8 +92,63 @@ def contact(message):
 
 
 # НЕОБХОДИМО НАПИСАТЬ РЕГИСТРАТОР ОТВЕТА!!
-def reserve(message):
-    bot.send_message(message.chat.id, "На какое имя забронировать?")
+def get_name_to_reserve(message):
+    user = User(
+        chat_id=message.chat.id,
+        username=message.chat.username
+    )
+
+    inf = [user.username]
+    name = bot.send_message(message.chat.id, "На какое имя забронировать?")
+
+    bot.register_next_step_handler(name, get_phone_number, inf)
+
+
+def get_phone_number(message, inf):
+    inf += message.text
+
+    phone_number = bot.send_message(message.chat.id, "Как с вами связаться? Напишите ваш номер телефона.")
+
+    bot.register_next_step_handler(phone_number, get_date_reserve, inf)
+
+
+def get_date_reserve(message, inf):
+    inf += message.text
+    print(inf)
+
+    date_markup = types.InlineKeyboardMarkup()
+    date_markup.add(types.InlineKeyboardButton(text="Сегодня", callback_data="today"))
+    date_markup.add(types.InlineKeyboardButton(text="Завтра", callback_data="tomorrow"))
+
+    bot.send_message(message.chat.id, "Когда вы хотите забронировать?", reply_markup=date_markup)
+
+
+def today_reserve(message, inf):
+    amount_of_people = bot.send_message(message.chat.id, "На сколько человек?")
+    inf += amount_of_people
+    get_chosen_time(message, inf)
+
+
+def tomorrow_reserve(message, inf):
+    amount_of_people = bot.send_message(message.chat.id, "На сколько человек?")
+    inf += amount_of_people
+    get_chosen_time(message, inf)
+
+
+def get_chosen_time(message, inf):
+    time_markup = types.InlineKeyboardMarkup()
+    time_markup.add(types.InlineKeyboardButton(text="14:00 - 15:30", callback_data="1"))
+    time_markup.add(types.InlineKeyboardButton(text="15:30 - 17:00", callback_data="2"))
+    time_markup.add(types.InlineKeyboardButton(text="17:00 - 18:30", callback_data="3"))
+    time_markup.add(types.InlineKeyboardButton(text="18:30 - 20:00", callback_data="4"))
+    time_markup.add(types.InlineKeyboardButton(text="20:00 - 21:30", callback_data="5"))
+    time_markup.add(types.InlineKeyboardButton(text="21:30 - 23:00", callback_data="6"))
+    time_markup.add(types.InlineKeyboardButton(text="23:00 - 00:30", callback_data="7"))
+    time_markup.add(types.InlineKeyboardButton(text="00:30 - 02:00", callback_data="8"))
+    time_markup.add(types.InlineKeyboardButton(text="02:00 - 03:30", callback_data="9"))
+    time_markup.add(types.InlineKeyboardButton(text="03:30 - 04:00", callback_data="10"))
+
+    bot.send_message(message.chat.id, "Выберите время:", reply_markup=time_markup)
 
 
 def menu_picture(message):
@@ -104,7 +165,7 @@ def query_handler(call):
     elif call.data == "contact_button":
         contact(call.message)
     elif call.data == 'reserve_button':
-        reserve(call.message)
+        get_name_to_reserve(call.message)
     elif call.data == 'menu_button':
         menu_picture(call.message)
     elif call.data == 'next':
@@ -113,6 +174,13 @@ def query_handler(call):
         back_to_menu(call.message)
     elif call.data == 'feedback':
         leave_feedback(call.message)
+    elif call.data == 'today':
+        pass
+        # today_reserve(call.message)
+    elif call.data == 'tomorrow':
+        pass
+        # tomorrow_reserve(call.message)
+        # print(call.data)
 
 
 bot.infinity_polling()
