@@ -93,7 +93,7 @@ def contact(message):
     bot.send_message(message.chat.id, "Напишите @razrabot", reply_markup=back_to_menu_markup)
 
 
-def get_name_to_reserve(message):
+def get_name_to_reservation(message):
     global inf
     inf = []
 
@@ -116,10 +116,10 @@ def get_phone_number(message, inf):
 
     phone_number = bot.send_message(message.chat.id, "Как с вами связаться? Напишите ваш номер телефона.")
 
-    bot.register_next_step_handler(phone_number, get_date_reserve, inf)
+    bot.register_next_step_handler(phone_number, get_date_reservation, inf)
 
 
-def get_date_reserve(message, inf):
+def get_date_reservation(message, inf):
     phone_number = message.text
     inf += [phone_number]
 
@@ -130,18 +130,18 @@ def get_date_reserve(message, inf):
     bot.send_message(message.chat.id, "Когда вы хотите забронировать?", reply_markup=date_markup)
 
 
-def today_reserve(message, date):
-    reserve_day = date
+def today_reservation(message, date):
+    reservation_day = date
     amount_of_people = bot.send_message(message.chat.id, "На сколько человек?")
 
-    bot.register_next_step_handler(amount_of_people, get_chosen_time, reserve_day)
+    bot.register_next_step_handler(amount_of_people, get_chosen_time, reservation_day)
 
 
-def tomorrow_reserve(message, date):
-    reserve_day = date
+def tomorrow_reservation(message, date):
+    reservation_day = date
     amount_of_people = bot.send_message(message.chat.id, "На сколько человек?")
 
-    bot.register_next_step_handler(amount_of_people, get_chosen_time, reserve_day)
+    bot.register_next_step_handler(amount_of_people, get_chosen_time, reservation_day)
 
 
 def get_chosen_time(message, reserve_day):
@@ -163,9 +163,9 @@ def get_chosen_time(message, reserve_day):
     bot.send_message(message.chat.id, "Выберите время:", reply_markup=time_markup)
 
 
-def save_reserve_time(message, reserve_time):
+def save_reservation_time(message, reservation_time):
     global inf
-    inf += [reserve_time]
+    inf += [reservation_time]
 
     back_to_menu_markup = types.InlineKeyboardMarkup()
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
@@ -191,7 +191,7 @@ def query_handler(call):
     elif call.data == "contact_button":
         contact(call.message)
     elif call.data == 'reserve_button':
-        get_name_to_reserve(call.message)
+        get_name_to_reservation(call.message)
     elif call.data == 'menu_button':
         menu_picture(call.message)
     elif call.data == 'next':
@@ -201,23 +201,23 @@ def query_handler(call):
     elif call.data == 'feedback':
         leave_feedback(call.message)
     elif call.data == 'сегодня':
-        today_reserve(call.message, call.data)
+        today_reservation(call.message, call.data)
     elif call.data == 'завтра':
-        tomorrow_reserve(call.message, call.data)
+        tomorrow_reservation(call.message, call.data)
     elif call.data == '14:00 - 15:30':
-        save_reserve_time(call.message, call.data)
+        save_reservation_time(call.message, call.data)
     elif call.data == '15:30 - 17:00':
-        save_reserve_time(call.message, call.data)
+        save_reservation_time(call.message, call.data)
     elif call.data == '17:00 - 18:30':
-        save_reserve_time(call.message, call.data)
+        save_reservation_time(call.message, call.data)
     elif call.data == '18:30 - 20:00':
-        save_reserve_time(call.message, call.data)
+        save_reservation_time(call.message, call.data)
     elif call.data == '20:00 - 21:30':
-        save_reserve_time(call.message, call.data)
+        save_reservation_time(call.message, call.data)
     elif call.data == '21:30 - 23:00':
-        save_reserve_time(call.message, call.data)
+        save_reservation_time(call.message, call.data)
     elif call.data == '23:00 - 00:00':
-        save_reserve_time(call.message, call.data)
+        save_reservation_time(call.message, call.data)
 
 
 bot.infinity_polling()
