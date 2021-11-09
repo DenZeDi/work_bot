@@ -6,6 +6,8 @@ import time
 
 bot = telebot.TeleBot(token)
 
+inf = []
+
 
 class User:
     def __init__(self, chat_id=0, username=''):
@@ -91,21 +93,26 @@ def contact(message):
     bot.send_message(message.chat.id, "Напишите @razrabot", reply_markup=back_to_menu_markup)
 
 
-# НЕОБХОДИМО НАПИСАТЬ РЕГИСТРАТОР ОТВЕТА!!
 def get_name_to_reserve(message):
+    global inf
+    inf = []
+
     user = User(
         chat_id=message.chat.id,
         username=message.chat.username
     )
 
-    inf = [user.username]
+    username = user.username
+    inf += [username]
+
     name = bot.send_message(message.chat.id, "На какое имя забронировать?")
 
     bot.register_next_step_handler(name, get_phone_number, inf)
 
 
 def get_phone_number(message, inf):
-    inf += message.text
+    name = message.text
+    inf += [name]
 
     phone_number = bot.send_message(message.chat.id, "Как с вами связаться? Напишите ваш номер телефона.")
 
@@ -113,49 +120,68 @@ def get_phone_number(message, inf):
 
 
 def get_date_reserve(message, inf):
-    inf += message.text
-    print(inf)
+    phone_number = message.text
+    inf += [phone_number]
 
     date_markup = types.InlineKeyboardMarkup()
-    date_markup.add(types.InlineKeyboardButton(text="Сегодня", callback_data="today"))
-    date_markup.add(types.InlineKeyboardButton(text="Завтра", callback_data="tomorrow"))
+    date_markup.add(types.InlineKeyboardButton(text="Сегодня", callback_data="сегодня"))
+    date_markup.add(types.InlineKeyboardButton(text="Завтра", callback_data="завтра"))
 
     bot.send_message(message.chat.id, "Когда вы хотите забронировать?", reply_markup=date_markup)
 
 
-def today_reserve(message, inf):
+def today_reserve(message, date):
+    reserve_day = date
     amount_of_people = bot.send_message(message.chat.id, "На сколько человек?")
-    inf += amount_of_people
-    get_chosen_time(message, inf)
+
+    bot.register_next_step_handler(amount_of_people, get_chosen_time, reserve_day)
 
 
-def tomorrow_reserve(message, inf):
+def tomorrow_reserve(message, date):
+    reserve_day = date
     amount_of_people = bot.send_message(message.chat.id, "На сколько человек?")
-    inf += amount_of_people
-    get_chosen_time(message, inf)
+
+    bot.register_next_step_handler(amount_of_people, get_chosen_time, reserve_day)
 
 
-def get_chosen_time(message, inf):
+def get_chosen_time(message, reserve_day):
+    global inf
+
+    inf += [reserve_day]
+    amount_of_people = message.text
+    inf += [amount_of_people]
+
     time_markup = types.InlineKeyboardMarkup()
-    time_markup.add(types.InlineKeyboardButton(text="14:00 - 15:30", callback_data="1"))
-    time_markup.add(types.InlineKeyboardButton(text="15:30 - 17:00", callback_data="2"))
-    time_markup.add(types.InlineKeyboardButton(text="17:00 - 18:30", callback_data="3"))
-    time_markup.add(types.InlineKeyboardButton(text="18:30 - 20:00", callback_data="4"))
-    time_markup.add(types.InlineKeyboardButton(text="20:00 - 21:30", callback_data="5"))
-    time_markup.add(types.InlineKeyboardButton(text="21:30 - 23:00", callback_data="6"))
-    time_markup.add(types.InlineKeyboardButton(text="23:00 - 00:30", callback_data="7"))
-    time_markup.add(types.InlineKeyboardButton(text="00:30 - 02:00", callback_data="8"))
-    time_markup.add(types.InlineKeyboardButton(text="02:00 - 03:30", callback_data="9"))
-    time_markup.add(types.InlineKeyboardButton(text="03:30 - 04:00", callback_data="10"))
+    time_markup.add(types.InlineKeyboardButton(text="14:00 - 15:30", callback_data="14:00 - 15:30"))
+    time_markup.add(types.InlineKeyboardButton(text="15:30 - 17:00", callback_data="15:30 - 17:00"))
+    time_markup.add(types.InlineKeyboardButton(text="17:00 - 18:30", callback_data="17:00 - 18:30"))
+    time_markup.add(types.InlineKeyboardButton(text="18:30 - 20:00", callback_data="18:30 - 20:00"))
+    time_markup.add(types.InlineKeyboardButton(text="20:00 - 21:30", callback_data="20:00 - 21:30"))
+    time_markup.add(types.InlineKeyboardButton(text="21:30 - 23:00", callback_data="21:30 - 23:00"))
+    time_markup.add(types.InlineKeyboardButton(text="23:00 - 00:00", callback_data="23:00 - 00:00"))
 
     bot.send_message(message.chat.id, "Выберите время:", reply_markup=time_markup)
 
 
+def save_reserve_time(message, reserve_time):
+    global inf
+    inf += [reserve_time]
+
+    back_to_menu_markup = types.InlineKeyboardMarkup()
+    back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
+
+    bot.send_message(message.chat.id, "Ваша бронь принята, ждем вас!")
+    time.sleep(1)
+    bot.send_message(message.chat.id, "Если будут изменения, пожалуйста, предупредите")
+    time.sleep(1)
+    bot.send_message(message.chat.id, "Вернуться в меню", reply_markup=back_to_menu_markup)
+
+
 def menu_picture(message):
     bot.send_message(message.chat.id, "Меню")
-    bot.send_photo(message.chat.id, photo=open(r"C:\Users\danya\Desktop\Работа\Чат-боты\work_bot\2.jpg", 'rb'))
-    bot.send_photo(message.chat.id, photo=open(r"C:\Users\danya\Desktop\Работа\Чат-боты\work_bot\3.jpg", 'rb'))
-    bot.send_photo(message.chat.id, photo=open(r"C:\Users\danya\Desktop\Работа\Чат-боты\work_bot\5.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"2.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"3.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"5.jpg", 'rb'))
 
 
 @bot.callback_query_handler(func=lambda call: True)
@@ -174,13 +200,24 @@ def query_handler(call):
         back_to_menu(call.message)
     elif call.data == 'feedback':
         leave_feedback(call.message)
-    elif call.data == 'today':
-        pass
-        # today_reserve(call.message)
-    elif call.data == 'tomorrow':
-        pass
-        # tomorrow_reserve(call.message)
-        # print(call.data)
+    elif call.data == 'сегодня':
+        today_reserve(call.message, call.data)
+    elif call.data == 'завтра':
+        tomorrow_reserve(call.message, call.data)
+    elif call.data == '14:00 - 15:30':
+        save_reserve_time(call.message, call.data)
+    elif call.data == '15:30 - 17:00':
+        save_reserve_time(call.message, call.data)
+    elif call.data == '17:00 - 18:30':
+        save_reserve_time(call.message, call.data)
+    elif call.data == '18:30 - 20:00':
+        save_reserve_time(call.message, call.data)
+    elif call.data == '20:00 - 21:30':
+        save_reserve_time(call.message, call.data)
+    elif call.data == '21:30 - 23:00':
+        save_reserve_time(call.message, call.data)
+    elif call.data == '23:00 - 00:00':
+        save_reserve_time(call.message, call.data)
 
 
 bot.infinity_polling()
