@@ -1,30 +1,20 @@
-from config import token
-import telebot
-from telebot import types
-import gspread
 import time
-from db import engine, clients
+import telebot
+from config import token
+from telebot import types
+from db import engine, clients, feedback
 
 bot = telebot.TeleBot(token)
 
 inf = []
 newsletter = ''
 
-# conn = engine.connect()
-# ins = clients.insert().values()
-# result = conn.execute()
-
 
 class User:
-    def __init__(self, chat_id=0, username=''):
+    def __init__(self, chat_id=0, username='', first_name=''):
         self.chat_id = chat_id
         self.username = username
-
-
-# Connection to google spreadsheet
-# gc = gspread.service_account(filename='credentials.json')
-# sh = gc.open_by_key('1WmRFckXhQIPeZ7-qKUNKCPgluCg828LwSAc7APsiHRc')
-# worksheet = sh.worksheet("Брони сегодня")
+        self.first_name = first_name
 
 
 @bot.message_handler(commands=['start'])
@@ -77,19 +67,19 @@ def query_handler(call):
     elif call.data == 'завтра':
         tomorrow_reservation(call.message, call.data)
     elif call.data == '14:00 - 15:30':
-        save_reservation_time(call.message, call.data)
+        get_reservation_time(call.message, call.data)
     elif call.data == '15:30 - 17:00':
-        save_reservation_time(call.message, call.data)
+        get_reservation_time(call.message, call.data)
     elif call.data == '17:00 - 18:30':
-        save_reservation_time(call.message, call.data)
+        get_reservation_time(call.message, call.data)
     elif call.data == '18:30 - 20:00':
-        save_reservation_time(call.message, call.data)
+        get_reservation_time(call.message, call.data)
     elif call.data == '20:00 - 21:30':
-        save_reservation_time(call.message, call.data)
+        get_reservation_time(call.message, call.data)
     elif call.data == '21:30 - 23:00':
-        save_reservation_time(call.message, call.data)
+        get_reservation_time(call.message, call.data)
     elif call.data == '23:00 - 00:00':
-        save_reservation_time(call.message, call.data)
+        get_reservation_time(call.message, call.data)
     elif call.data == 'view_reservation':
         view_reservation(call.message)
     elif call.data == 'make_a_newsletter':
@@ -176,23 +166,18 @@ def next_story(message):
 
 
 def leave_feedback(message):
-    feedback = bot.send_message(message.chat.id, "Напишите, что о нас думаете!")
-    bot.register_next_step_handler(feedback, feedback_thanks)
+    feedback_to_db = bot.send_message(message.chat.id, "Напишите, что о нас думаете!")
+    bot.register_next_step_handler(feedback_to_db, feedback_thanks)
 
 
 def feedback_thanks(message):
-    feedback = message.text
-    save_feedback_to_database(feedback)
+    feedback_to_db = message.text
+    save_feedback_to_database(message, feedback_to_db)
 
     back_to_menu_markup = types.InlineKeyboardMarkup()
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
 
     bot.send_message(message.chat.id, "Спасибо за отзыв!", reply_markup=back_to_menu_markup)
-
-
-def save_feedback_to_database(feedback):
-    print(feedback)
-    # Записать данные в базу данных "feedback"
 
 
 def back_to_menu(message):
@@ -225,7 +210,8 @@ def get_name_to_reservation(message):
 
     user = User(
         chat_id=message.chat.id,
-        username=message.chat.username
+        username=message.chat.username,
+        first_name=message.chat.first_name
     )
 
     username = user.username
@@ -289,7 +275,7 @@ def get_chosen_time(message, reserve_day):
     bot.send_message(message.chat.id, "Выберите время:", reply_markup=time_markup)
 
 
-def save_reservation_time(message, reservation_time):
+def get_reservation_time(message, reservation_time):
     global inf
     inf += [reservation_time]
     save_reservation_data_to_database(inf)
@@ -305,8 +291,26 @@ def save_reservation_time(message, reservation_time):
 
 
 def save_reservation_data_to_database(inf):
-    print(f'username={inf[0]}, name={inf[1]}, phone_number={inf[2]}, time={inf[5]}')
+    print(f'username={inf[0]}, name={inf[1]}, phone_number={inf[2]}, time={inf[5]}, reservation_day={inf[3]}')
+
     # Записать все данные в базу данных "clients"
+    conn = engine.connect()
+    ins = clients.insert().values(client_username=inf[0], client_name=inf[1], phone_number=inf[2],
+                                  reservation_time=inf[5], reservation_day=inf[3])
+    conn.execute(ins)
+
+
+def save_feedback_to_database(message, feedback_to_db):
+    user = User(
+        chat_id=message.chat.id,
+        username=message.chat.username,
+        first_name=message.chat.first_name
+    )
+
+    # Записать все данные в базу данных "feedback"
+    conn = engine.connect()
+    ins = feedback.insert().values(client_username=user.username, client_name=user.first_name, feedback=feedback_to_db)
+    conn.execute(ins)
 
 
 def menu_picture(message):
