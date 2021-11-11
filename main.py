@@ -3,10 +3,16 @@ import telebot
 from telebot import types
 import gspread
 import time
+from db import engine, clients
 
 bot = telebot.TeleBot(token)
 
 inf = []
+newsletter = ''
+
+# conn = engine.connect()
+# ins = clients.insert().values()
+# result = conn.execute()
 
 
 class User:
@@ -16,8 +22,8 @@ class User:
 
 
 # Connection to google spreadsheet
-gc = gspread.service_account(filename='credentials.json')
-sh = gc.open_by_key('1WmRFckXhQIPeZ7-qKUNKCPgluCg828LwSAc7APsiHRc')
+# gc = gspread.service_account(filename='credentials.json')
+# sh = gc.open_by_key('1WmRFckXhQIPeZ7-qKUNKCPgluCg828LwSAc7APsiHRc')
 # worksheet = sh.worksheet("Брони сегодня")
 
 
@@ -41,6 +47,111 @@ def menu(message):
     bot.send_message(message.chat.id, "Выберите действие: ", reply_markup=menu_markup)
 
 
+@bot.message_handler(content_types=['text'])
+def admin(message):
+    if message.text == '1234':
+        bot.send_message(message.chat.id, "Добрый день!")
+        admin_menu(message)
+    else:
+        bot.send_message(message.chat.id, "Извините, воспользуйтесь меню.")
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def query_handler(call):
+    if call.data == "squat_button":
+        squat(call.message)
+    elif call.data == "contact_button":
+        contact(call.message)
+    elif call.data == 'reserve_button':
+        get_name_to_reservation(call.message)
+    elif call.data == 'menu_button':
+        menu_picture(call.message)
+    elif call.data == 'next':
+        next_story(call.message)
+    elif call.data == 'back_to_menu':
+        back_to_menu(call.message)
+    elif call.data == 'feedback':
+        leave_feedback(call.message)
+    elif call.data == 'сегодня':
+        today_reservation(call.message, call.data)
+    elif call.data == 'завтра':
+        tomorrow_reservation(call.message, call.data)
+    elif call.data == '14:00 - 15:30':
+        save_reservation_time(call.message, call.data)
+    elif call.data == '15:30 - 17:00':
+        save_reservation_time(call.message, call.data)
+    elif call.data == '17:00 - 18:30':
+        save_reservation_time(call.message, call.data)
+    elif call.data == '18:30 - 20:00':
+        save_reservation_time(call.message, call.data)
+    elif call.data == '20:00 - 21:30':
+        save_reservation_time(call.message, call.data)
+    elif call.data == '21:30 - 23:00':
+        save_reservation_time(call.message, call.data)
+    elif call.data == '23:00 - 00:00':
+        save_reservation_time(call.message, call.data)
+    elif call.data == 'view_reservation':
+        view_reservation(call.message)
+    elif call.data == 'make_a_newsletter':
+        make_a_newsletter(call.message)
+    elif call.data == 'send_newsletter':
+        send_newsletter(call.message)
+    elif call.data == 'cancel_sending':
+        admin_menu(call.message)
+    elif call.data == 'back_to_admin_menu':
+        admin_menu(call.message)
+
+
+def admin_menu(message):
+    choose_markup = types.InlineKeyboardMarkup()
+    choose_markup.add(types.InlineKeyboardButton(text='Посмотреть брони', callback_data='view_reservation'))
+    choose_markup.add(types.InlineKeyboardButton(text='Сделать рассылку', callback_data='make_a_newsletter'))
+
+    bot.send_message(message.chat.id, "Выберите действие:", reply_markup=choose_markup)
+
+
+def view_reservation(message):
+    url = 'https://docs.google.com/spreadsheets/d/1WmRFckXhQIPeZ7-qKUNKCPgluCg828LwSAc7APsiHRc/edit?usp=sharing'
+
+    url_markup = types.InlineKeyboardMarkup()
+    url_markup.add(types.InlineKeyboardButton(text='Брони', url=url))
+
+    back_to_menu_markup = types.InlineKeyboardMarkup()
+    back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_admin_menu"))
+
+    # Запрос брони из базы данных
+    bot.send_message(message.chat.id, "Сегодня есть брони на: имя | номер телефона | время")
+    time.sleep(1)
+    bot.send_message(message.chat.id, "Посмотреть подобнее в гугл таблицах", reply_markup=url_markup)
+    time.sleep(1)
+    bot.send_message(message.chat.id, "Вернуться в меню", reply_markup=back_to_menu_markup)
+
+
+def make_a_newsletter(message):
+    newsletter = bot.send_message(message.chat.id, "Напишите сообщение, которое хотите всем отправить")
+    bot.register_next_step_handler(newsletter, sure_to_send)
+
+
+def sure_to_send(message):
+    global newsletter
+    newsletter = message.text
+
+    sure_markup = types.InlineKeyboardMarkup()
+    sure_markup.add(types.InlineKeyboardButton(text='Да', callback_data='send_newsletter'))
+    sure_markup.add(types.InlineKeyboardButton(text='Отмена', callback_data='cancel_sending'))
+
+    bot.send_message(message.chat.id, "Точно отправляем?", reply_markup=sure_markup)
+
+
+def send_newsletter(message):
+    # Отправить рассылку
+    print(newsletter)
+
+    bot.send_message(message.chat.id, "Рассылка отправлена!")
+
+    admin_menu(message)
+
+
 def next_story(message):
     action_markup = types.InlineKeyboardMarkup()
     action_markup.add(types.InlineKeyboardButton(text="Оставить отзыв", callback_data="feedback"))
@@ -52,7 +163,7 @@ def next_story(message):
                                       "территория, куда поселились люди, молодые и амбициозные. Они притягивают близких"
                                       " по творческому духу людей и создают различные интересные места, устраивают "
                                       "вечеринки и выставки, к тому же еще и живут там.")
-    time.sleep(15)
+    time.sleep(1)
     bot.send_message(message.chat.id, "У нас конечно же все законно и ничего мы не захватывали. Наш сквоттер оказался "
                                       "любителем рока и хороших вкусных кальянов ;)\n\nМы постарались и создали для вас"
                                       " атмосферу уютного рокерского домика, в который с радостью примем любого, "
@@ -64,9 +175,24 @@ def next_story(message):
     bot.send_message(message.chat.id, "Выберите действие: ", reply_markup=action_markup)
 
 
-# НЕОБХОДИМО НАПИСАТЬ РЕГИСТРАТОР ОТВЕТА!!
 def leave_feedback(message):
-    bot.send_message(message.chat.id, "Напишите, что о нас думаете!")
+    feedback = bot.send_message(message.chat.id, "Напишите, что о нас думаете!")
+    bot.register_next_step_handler(feedback, feedback_thanks)
+
+
+def feedback_thanks(message):
+    feedback = message.text
+    save_feedback_to_database(feedback)
+
+    back_to_menu_markup = types.InlineKeyboardMarkup()
+    back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
+
+    bot.send_message(message.chat.id, "Спасибо за отзыв!", reply_markup=back_to_menu_markup)
+
+
+def save_feedback_to_database(feedback):
+    print(feedback)
+    # Записать данные в базу данных "feedback"
 
 
 def back_to_menu(message):
@@ -166,6 +292,7 @@ def get_chosen_time(message, reserve_day):
 def save_reservation_time(message, reservation_time):
     global inf
     inf += [reservation_time]
+    save_reservation_data_to_database(inf)
 
     back_to_menu_markup = types.InlineKeyboardMarkup()
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
@@ -177,47 +304,17 @@ def save_reservation_time(message, reservation_time):
     bot.send_message(message.chat.id, "Вернуться в меню", reply_markup=back_to_menu_markup)
 
 
+def save_reservation_data_to_database(inf):
+    print(f'username={inf[0]}, name={inf[1]}, phone_number={inf[2]}, time={inf[5]}')
+    # Записать все данные в базу данных "clients"
+
+
 def menu_picture(message):
     bot.send_message(message.chat.id, "Меню")
     bot.send_photo(message.chat.id, photo=open(r"2.jpg", 'rb'))
     bot.send_photo(message.chat.id, photo=open(r"3.jpg", 'rb'))
     bot.send_photo(message.chat.id, photo=open(r"5.jpg", 'rb'))
-
-
-@bot.callback_query_handler(func=lambda call: True)
-def query_handler(call):
-    if call.data == "squat_button":
-        squat(call.message)
-    elif call.data == "contact_button":
-        contact(call.message)
-    elif call.data == 'reserve_button':
-        get_name_to_reservation(call.message)
-    elif call.data == 'menu_button':
-        menu_picture(call.message)
-    elif call.data == 'next':
-        next_story(call.message)
-    elif call.data == 'back_to_menu':
-        back_to_menu(call.message)
-    elif call.data == 'feedback':
-        leave_feedback(call.message)
-    elif call.data == 'сегодня':
-        today_reservation(call.message, call.data)
-    elif call.data == 'завтра':
-        tomorrow_reservation(call.message, call.data)
-    elif call.data == '14:00 - 15:30':
-        save_reservation_time(call.message, call.data)
-    elif call.data == '15:30 - 17:00':
-        save_reservation_time(call.message, call.data)
-    elif call.data == '17:00 - 18:30':
-        save_reservation_time(call.message, call.data)
-    elif call.data == '18:30 - 20:00':
-        save_reservation_time(call.message, call.data)
-    elif call.data == '20:00 - 21:30':
-        save_reservation_time(call.message, call.data)
-    elif call.data == '21:30 - 23:00':
-        save_reservation_time(call.message, call.data)
-    elif call.data == '23:00 - 00:00':
-        save_reservation_time(call.message, call.data)
+    back_to_menu(message)
 
 
 bot.infinity_polling()
