@@ -6,7 +6,6 @@ from db import engine, clients, feedback
 
 bot = telebot.TeleBot(token)
 
-inf = []
 newsletter = ''
 
 
@@ -180,7 +179,16 @@ def leave_feedback(message):
 
 def feedback_thanks(message):
     feedback_to_db = message.text
-    save_feedback_to_database(message, feedback_to_db)
+
+    user = User(
+        chat_id=message.chat.id,
+        username=message.chat.username,
+        first_name=message.chat.first_name
+    )
+
+    conn = engine.connect()
+    ins = feedback.insert().values(client_username=user.username, client_name=user.first_name, feedback=feedback_to_db)
+    conn.execute(ins)
 
     back_to_menu_markup = types.InlineKeyboardMarkup()
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
@@ -213,9 +221,6 @@ def contact(message):
 
 
 def get_name_to_reservation(message):
-    global inf
-    inf = []
-
     user = User(
         chat_id=message.chat.id,
         username=message.chat.username,
@@ -223,25 +228,46 @@ def get_name_to_reservation(message):
     )
 
     username = user.username
-    inf += [username]
+
+    conn = engine.connect()
+    ins = clients.insert().values(client_username=username)
+    conn.execute(ins)
 
     name = bot.send_message(message.chat.id, "На какое имя забронировать?")
 
-    bot.register_next_step_handler(name, get_phone_number, inf)
+    bot.register_next_step_handler(name, get_phone_number)
 
 
-def get_phone_number(message, inf):
+def get_client_id():
+    conn = engine.connect()
+    s = clients.select(clients.c.client_id)
+    result = conn.execute(s)
+    row = result.fetchall()
+
+    return row
+
+
+def get_phone_number(message):
+    row = get_client_id()
+
     name = message.text
-    inf += [name]
+
+    conn = engine.connect()
+    ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(client_name=name)
+    conn.execute(ins)
 
     phone_number = bot.send_message(message.chat.id, "Как с вами связаться? Напишите ваш номер телефона.")
 
-    bot.register_next_step_handler(phone_number, get_date_reservation, inf)
+    bot.register_next_step_handler(phone_number, get_date_reservation)
 
 
-def get_date_reservation(message, inf):
+def get_date_reservation(message):
     phone_number = message.text
-    inf += [phone_number]
+
+    row = get_client_id()
+    conn = engine.connect()
+    ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(phone_number=phone_number)
+    conn.execute(ins)
 
     date_markup = types.InlineKeyboardMarkup()
     date_markup.add(types.InlineKeyboardButton(text="Сегодня", callback_data="сегодня"))
@@ -265,11 +291,13 @@ def tomorrow_reservation(message, date):
 
 
 def get_chosen_time(message, reserve_day):
-    global inf
-
-    inf += [reserve_day]
     amount_of_people = message.text
-    inf += [amount_of_people]
+
+    row = get_client_id()
+    conn = engine.connect()
+    ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(reservation_day=reserve_day,
+                                                                                     amount_of_people=amount_of_people)
+    conn.execute(ins)
 
     time_markup = types.InlineKeyboardMarkup()
     time_markup.add(types.InlineKeyboardButton(text="14:00 - 15:30", callback_data="14:00 - 15:30"))
@@ -284,9 +312,10 @@ def get_chosen_time(message, reserve_day):
 
 
 def get_reservation_time(message, reservation_time):
-    global inf
-    inf += [reservation_time]
-    save_reservation_data_to_database(inf)
+    row = get_client_id()
+    conn = engine.connect()
+    ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(reservation_time=reservation_time)
+    conn.execute(ins)
 
     back_to_menu_markup = types.InlineKeyboardMarkup()
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
@@ -296,25 +325,6 @@ def get_reservation_time(message, reservation_time):
     bot.send_message(message.chat.id, "Если будут изменения, пожалуйста, предупредите")
     time.sleep(1)
     bot.send_message(message.chat.id, "Вернуться в меню", reply_markup=back_to_menu_markup)
-
-
-def save_reservation_data_to_database(inf):
-    conn = engine.connect()
-    ins = clients.insert().values(client_username=inf[0], client_name=inf[1], phone_number=inf[2],
-                                  reservation_time=inf[5], reservation_day=inf[3])
-    conn.execute(ins)
-
-
-def save_feedback_to_database(message, feedback_to_db):
-    user = User(
-        chat_id=message.chat.id,
-        username=message.chat.username,
-        first_name=message.chat.first_name
-    )
-
-    conn = engine.connect()
-    ins = feedback.insert().values(client_username=user.username, client_name=user.first_name, feedback=feedback_to_db)
-    conn.execute(ins)
 
 
 def menu_picture(message):

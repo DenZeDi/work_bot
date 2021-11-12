@@ -15,6 +15,9 @@ def update_reservation_today():
     result = conn.execute(s)
     row = result.fetchall()
 
+    worksheet_today = sh.worksheet("Брони сегодня")
+    worksheet_today.batch_clear(["A2:D60"])
+
     for index in range(len(row)):
         username = row[index][1]
         name = row[index][2]
@@ -22,7 +25,6 @@ def update_reservation_today():
         reservation_time = row[index][4]
 
         # Обновлять гугл таблицу с сегодняшними бронями
-        worksheet_today = sh.worksheet("Брони сегодня")
         worksheet_today.update(f'A{index + 2}', username)
         worksheet_today.update(f'B{index + 2}', name)
         worksheet_today.update(f'C{index + 2}', phone_number)
@@ -34,6 +36,9 @@ def update_reservation_tomorrow():
     result = conn.execute(s)
     row = result.fetchall()
 
+    worksheet_tomorrow = sh.worksheet("Брони завтра")
+    worksheet_tomorrow.batch_clear(["A2:D60"])
+
     for index in range(len(row)):
         username = row[index][1]
         name = row[index][2]
@@ -41,7 +46,6 @@ def update_reservation_tomorrow():
         reservation_time = row[index][4]
 
         # Обновлять гугл таблицу с завтрашними бронями
-        worksheet_tomorrow = sh.worksheet("Брони завтра")
         worksheet_tomorrow.update(f'A{index + 2}', username)
         worksheet_tomorrow.update(f'B{index + 2}', name)
         worksheet_tomorrow.update(f'C{index + 2}', phone_number)
@@ -65,7 +69,7 @@ def update_feedback():
         worksheet_feedback.update(f'C{index + 2}', fb)
 
 
-schedule.every().minute.do(update_reservation_today)
+schedule.every().minutes.do(update_reservation_today)
 schedule.every().minute.do(update_reservation_tomorrow)
 schedule.every().minute.do(update_feedback)
 
