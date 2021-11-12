@@ -110,10 +110,18 @@ def view_reservation(message):
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_admin_menu"))
 
     # Запрос брони из базы данных
-    bot.send_message(message.chat.id, "Сегодня есть брони на: имя | номер телефона | время")
-    time.sleep(1)
+    conn = engine.connect()
+    s = clients.select().where(clients.c.reservation_day == 'сегодня').order_by(clients.c.reservation_time.asc())
+    result = conn.execute(s)
+    row = result.fetchall()
+
+    bot.send_message(message.chat.id, "Сегодня есть брони на: \nимя | номер телефона | время")
+    for index in range(len(row)):
+        bot.send_message(message.chat.id, f"{row[index][2]} | {row[index][3]} | {row[index][4]}")
+
+    time.sleep(2)
     bot.send_message(message.chat.id, "Посмотреть подобнее в гугл таблицах", reply_markup=url_markup)
-    time.sleep(1)
+    time.sleep(2)
     bot.send_message(message.chat.id, "Вернуться в меню", reply_markup=back_to_menu_markup)
 
 
@@ -134,7 +142,7 @@ def sure_to_send(message):
 
 
 def send_newsletter(message):
-    # Отправить рассылку
+    # Отправить рассылку!!!
     print(newsletter)
 
     bot.send_message(message.chat.id, "Рассылка отправлена!")
@@ -291,9 +299,6 @@ def get_reservation_time(message, reservation_time):
 
 
 def save_reservation_data_to_database(inf):
-    print(f'username={inf[0]}, name={inf[1]}, phone_number={inf[2]}, time={inf[5]}, reservation_day={inf[3]}')
-
-    # Записать все данные в базу данных "clients"
     conn = engine.connect()
     ins = clients.insert().values(client_username=inf[0], client_name=inf[1], phone_number=inf[2],
                                   reservation_time=inf[5], reservation_day=inf[3])
@@ -307,7 +312,6 @@ def save_feedback_to_database(message, feedback_to_db):
         first_name=message.chat.first_name
     )
 
-    # Записать все данные в базу данных "feedback"
     conn = engine.connect()
     ins = feedback.insert().values(client_username=user.username, client_name=user.first_name, feedback=feedback_to_db)
     conn.execute(ins)
@@ -315,9 +319,9 @@ def save_feedback_to_database(message, feedback_to_db):
 
 def menu_picture(message):
     bot.send_message(message.chat.id, "Меню")
-    bot.send_photo(message.chat.id, photo=open(r"2.jpg", 'rb'))
-    bot.send_photo(message.chat.id, photo=open(r"3.jpg", 'rb'))
-    bot.send_photo(message.chat.id, photo=open(r"5.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"images\2.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"images\3.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"images\5.jpg", 'rb'))
     back_to_menu(message)
 
 
