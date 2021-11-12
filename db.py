@@ -1,28 +1,32 @@
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import create_engine, Column, Integer, String
 
 engine = create_engine('sqlite:///hookah.db', echo=True)
-meta = MetaData()
 
-clients = Table(
-    'clients', meta,
-    Column('client_id', Integer, primary_key=True),
-    Column('client_username', String),
-    Column('client_name', String),
-    Column('phone_number', String),
-    Column('reservation_time', String),
-    Column('reservation_day', String),
-    Column('amount_of_people', Integer)
-)
-feedback = Table(
-    'feedback', meta,
-    Column('client_id', Integer, primary_key=True),
-    Column('client_username', String),
-    Column('client_name', String),
-    Column('feedback', String)
-)
-meta.create_all(engine)
+Base = declarative_base()
 
-# conn = engine.connect()
-# conn.execute(clients.drop(engine))
-# conn = engine.connect()
-# conn.execute(feedback.drop(engine))
+
+class Clients(Base):
+    __tablename__ = "clients"
+    client_id = Column(Integer, primary_key=True)
+    client_username = Column(String)
+    client_name = Column(String)
+    phone_number = Column(String)
+    reservation_time = Column(String)
+    reservation_day = Column(String)
+    amount_of_people = Column(String)
+
+
+class Feedback(Base):
+    __tablename__ = "feedback"
+    client_id = Column(Integer, primary_key=True)
+    client_username = Column(String)
+    client_name = Column(String)
+    feedback = Column(String)
+
+
+Session = sessionmaker(bind=engine)
+session = Session()
+
+Base.metadata.create_all(engine)

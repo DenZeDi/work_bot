@@ -2,7 +2,7 @@ import time
 import telebot
 from config import token
 from telebot import types
-from db import engine, clients, feedback
+from db import engine, session, Clients, Feedback
 
 bot = telebot.TeleBot(token)
 
@@ -10,10 +10,15 @@ newsletter = ''
 
 
 class User:
-    def __init__(self, chat_id=0, username='', first_name=''):
+    def __init__(self, chat_id=0, username='', first_name='', phone_number='', reservation_time='',
+                 reservation_day='', amount_of_people=''):
         self.chat_id = chat_id
         self.username = username
         self.first_name = first_name
+        self.phone_number = phone_number
+        self.reservation_time = reservation_time
+        self.reservation_day = reservation_day
+        self.amount_of_people = amount_of_people
 
 
 @bot.message_handler(commands=['start'])
@@ -186,9 +191,8 @@ def feedback_thanks(message):
         first_name=message.chat.first_name
     )
 
-    conn = engine.connect()
-    ins = feedback.insert().values(client_username=user.username, client_name=user.first_name, feedback=feedback_to_db)
-    conn.execute(ins)
+    session.add(Feedback(client_username=user.username, client_name=user.first_name, feedback=feedback_to_db))
+    session.commit()
 
     back_to_menu_markup = types.InlineKeyboardMarkup()
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
@@ -224,14 +228,11 @@ def get_name_to_reservation(message):
     user = User(
         chat_id=message.chat.id,
         username=message.chat.username,
-        first_name=message.chat.first_name
     )
 
     username = user.username
 
-    conn = engine.connect()
-    ins = clients.insert().values(client_username=username)
-    conn.execute(ins)
+    session.add(Clients(client_username=username))
 
     name = bot.send_message(message.chat.id, "На какое имя забронировать?")
 
@@ -239,10 +240,10 @@ def get_name_to_reservation(message):
 
 
 def get_client_id():
-    conn = engine.connect()
-    s = clients.select(clients.c.client_id)
-    result = conn.execute(s)
+    session.query(Clients.client_id)
+    result = session.commit()
     row = result.fetchall()
+    print(row)
 
     return row
 
@@ -251,6 +252,8 @@ def get_phone_number(message):
     row = get_client_id()
 
     name = message.text
+
+    session.add(Clients(client_name=name))
 
     conn = engine.connect()
     ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(client_name=name)
