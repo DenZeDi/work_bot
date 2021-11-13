@@ -237,7 +237,6 @@ def get_name_to_reservation(message):
     username = user.username
 
     session.add(Clients(client_chat_id=chat_id, client_username=username))
-    session.commit()
 
     name = bot.send_message(message.chat.id, "На какое имя забронировать?")
 
@@ -250,7 +249,6 @@ def get_phone_number(message):
 
     session.query(Clients).filter(Clients.client_id == row).\
         update({Clients.client_name: name}, synchronize_session=False)
-    session.commit()
 
     phone_number = bot.send_message(message.chat.id, "Как с вами связаться? Напишите ваш номер телефона.")
 
@@ -263,7 +261,6 @@ def get_date_reservation(message):
 
     session.query(Clients).filter(Clients.client_id == row).\
         update({Clients.phone_number: phone_number}, synchronize_session=False)
-    session.commit()
 
     date_markup = types.InlineKeyboardMarkup()
     date_markup.add(types.InlineKeyboardButton(text="Сегодня", callback_data="сегодня"))
@@ -293,7 +290,6 @@ def get_chosen_time(message, reserve_day):
     session.query(Clients).filter(Clients.client_id == row).\
         update({Clients.amount_of_people: amount_of_people, Clients.reservation_day: reserve_day},
                synchronize_session=False)
-    session.commit()
 
     time_markup = types.InlineKeyboardMarkup()
     time_markup.add(types.InlineKeyboardButton(text="14:00 - 15:30", callback_data="14:00 - 15:30"))
