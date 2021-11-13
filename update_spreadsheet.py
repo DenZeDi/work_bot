@@ -1,28 +1,26 @@
 import time
 import gspread
 import schedule
-from db import engine, clients, feedback
+from db import Clients, Feedback, session
 
 # Connection to google spreadsheet
 gc = gspread.service_account(filename='credentials.json')
 sh = gc.open_by_key('1WmRFckXhQIPeZ7-qKUNKCPgluCg828LwSAc7APsiHRc')
 
-conn = engine.connect()
-
 
 def update_reservation_today():
-    s = clients.select().where(clients.c.reservation_day == 'сегодня').order_by(clients.c.reservation_time.asc())
-    result = conn.execute(s)
-    row = result.fetchall()
+    result = session.query(Clients).filter(Clients.reservation_day == 'сегодня').\
+        order_by(Clients.reservation_time).all()
 
     worksheet_today = sh.worksheet("Брони сегодня")
     worksheet_today.batch_clear(["A2:D60"])
 
-    for index in range(len(row)):
-        username = row[index][1]
-        name = row[index][2]
-        phone_number = row[index][3]
-        reservation_time = row[index][4]
+    index = 0
+    for row in result:
+        username = row.client_username
+        name = row.client_name
+        phone_number = row.phone_number
+        reservation_time = row.reservation_time
 
         # Обновлять гугл таблицу с сегодняшними бронями
         worksheet_today.update(f'A{index + 2}', username)
@@ -30,20 +28,22 @@ def update_reservation_today():
         worksheet_today.update(f'C{index + 2}', phone_number)
         worksheet_today.update(f'D{index + 2}', reservation_time)
 
+        index += 1
+
 
 def update_reservation_tomorrow():
-    s = clients.select().where(clients.c.reservation_day == 'завтра').order_by(clients.c.reservation_time.asc())
-    result = conn.execute(s)
-    row = result.fetchall()
+    result = session.query(Clients).filter(Clients.reservation_day == 'завтра'). \
+        order_by(Clients.reservation_time).all()
 
     worksheet_tomorrow = sh.worksheet("Брони завтра")
     worksheet_tomorrow.batch_clear(["A2:D60"])
 
-    for index in range(len(row)):
-        username = row[index][1]
-        name = row[index][2]
-        phone_number = row[index][3]
-        reservation_time = row[index][4]
+    index = 0
+    for row in result:
+        username = row.client_username
+        name = row.client_name
+        phone_number = row.phone_number
+        reservation_time = row.reservation_time
 
         # Обновлять гугл таблицу с завтрашними бронями
         worksheet_tomorrow.update(f'A{index + 2}', username)
@@ -51,22 +51,27 @@ def update_reservation_tomorrow():
         worksheet_tomorrow.update(f'C{index + 2}', phone_number)
         worksheet_tomorrow.update(f'D{index + 2}', reservation_time)
 
+        index += 1
+
 
 def update_feedback():
-    s = feedback.select()
-    result = conn.execute(s)
-    row = result.fetchall()
+    result = session.query(Feedback).all()
 
-    for index in range(len(row)):
-        username = row[index][1]
-        name = row[index][2]
-        fb = row[index][3]
+    worksheet_feedback = sh.worksheet("Отзывы")
+    worksheet_feedback.batch_clear(["A2:C150"])
+
+    index = 0
+    for row in result:
+        username = row.client_username
+        name = row.client_name
+        fb = row.feedback
 
         # Обновлять гугл таблицу с отзывами
-        worksheet_feedback = sh.worksheet("Отзывы")
         worksheet_feedback.update(f'A{index + 2}', username)
         worksheet_feedback.update(f'B{index + 2}', name)
         worksheet_feedback.update(f'C{index + 2}', fb)
+
+        index += 1
 
 
 schedule.every().minutes.do(update_reservation_today)

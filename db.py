@@ -10,6 +10,7 @@ Base = declarative_base()
 class Clients(Base):
     __tablename__ = "clients"
     client_id = Column(Integer, primary_key=True)
+    client_chat_id = Column(Integer)
     client_username = Column(String)
     client_name = Column(String)
     phone_number = Column(String)
@@ -21,6 +22,7 @@ class Clients(Base):
 class Feedback(Base):
     __tablename__ = "feedback"
     client_id = Column(Integer, primary_key=True)
+    client_chat_id = Column(Integer)
     client_username = Column(String)
     client_name = Column(String)
     feedback = Column(String)

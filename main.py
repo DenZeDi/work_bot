@@ -2,7 +2,7 @@ import time
 import telebot
 from config import token
 from telebot import types
-from db import engine, session, Clients, Feedback
+from db import session, Clients, Feedback
 
 bot = telebot.TeleBot(token)
 
@@ -114,14 +114,12 @@ def view_reservation(message):
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_admin_menu"))
 
     # Запрос брони из базы данных
-    conn = engine.connect()
-    s = clients.select().where(clients.c.reservation_day == 'сегодня').order_by(clients.c.reservation_time.asc())
-    result = conn.execute(s)
-    row = result.fetchall()
+    result = session.query(Clients).filter(Clients.reservation_day == 'сегодня').\
+        order_by(Clients.reservation_time.asc())
 
     bot.send_message(message.chat.id, "Сегодня есть брони на: \nимя | номер телефона | время")
-    for index in range(len(row)):
-        bot.send_message(message.chat.id, f"{row[index][2]} | {row[index][3]} | {row[index][4]}")
+    for row in result:
+        bot.send_message(message.chat.id, f"{row.client_name} | {row.phone_number} | {row.reservation_time}")
 
     time.sleep(2)
     bot.send_message(message.chat.id, "Посмотреть подобнее в гугл таблицах", reply_markup=url_markup)
@@ -146,11 +144,11 @@ def sure_to_send(message):
 
 
 def send_newsletter(message):
-    # Отправить рассылку!!!
-    print(newsletter)
+    result = session.query(Clients.client_chat_id).distinct()
+    for row in result:
+        bot.send_message(row[0], f"{newsletter}")
 
     bot.send_message(message.chat.id, "Рассылка отправлена!")
-
     admin_menu(message)
 
 
@@ -224,40 +222,35 @@ def contact(message):
     bot.send_message(message.chat.id, "Напишите @razrabot", reply_markup=back_to_menu_markup)
 
 
+def get_client_id():
+    row = session.query(Clients.client_id).all()
+    return row[len(row) - 1][0]
+
+
 def get_name_to_reservation(message):
     user = User(
         chat_id=message.chat.id,
         username=message.chat.username,
     )
 
+    chat_id = user.chat_id
     username = user.username
 
-    session.add(Clients(client_username=username))
+    session.add(Clients(client_chat_id=chat_id, client_username=username))
+    session.commit()
 
     name = bot.send_message(message.chat.id, "На какое имя забронировать?")
 
     bot.register_next_step_handler(name, get_phone_number)
 
 
-def get_client_id():
-    session.query(Clients.client_id)
-    result = session.commit()
-    row = result.fetchall()
-    print(row)
-
-    return row
-
-
 def get_phone_number(message):
+    name = message.text
     row = get_client_id()
 
-    name = message.text
-
-    session.add(Clients(client_name=name))
-
-    conn = engine.connect()
-    ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(client_name=name)
-    conn.execute(ins)
+    session.query(Clients).filter(Clients.client_id == row).\
+        update({Clients.client_name: name}, synchronize_session=False)
+    session.commit()
 
     phone_number = bot.send_message(message.chat.id, "Как с вами связаться? Напишите ваш номер телефона.")
 
@@ -266,11 +259,11 @@ def get_phone_number(message):
 
 def get_date_reservation(message):
     phone_number = message.text
-
     row = get_client_id()
-    conn = engine.connect()
-    ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(phone_number=phone_number)
-    conn.execute(ins)
+
+    session.query(Clients).filter(Clients.client_id == row).\
+        update({Clients.phone_number: phone_number}, synchronize_session=False)
+    session.commit()
 
     date_markup = types.InlineKeyboardMarkup()
     date_markup.add(types.InlineKeyboardButton(text="Сегодня", callback_data="сегодня"))
@@ -295,12 +288,12 @@ def tomorrow_reservation(message, date):
 
 def get_chosen_time(message, reserve_day):
     amount_of_people = message.text
-
     row = get_client_id()
-    conn = engine.connect()
-    ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(reservation_day=reserve_day,
-                                                                                     amount_of_people=amount_of_people)
-    conn.execute(ins)
+
+    session.query(Clients).filter(Clients.client_id == row).\
+        update({Clients.amount_of_people: amount_of_people, Clients.reservation_day: reserve_day},
+               synchronize_session=False)
+    session.commit()
 
     time_markup = types.InlineKeyboardMarkup()
     time_markup.add(types.InlineKeyboardButton(text="14:00 - 15:30", callback_data="14:00 - 15:30"))
@@ -316,9 +309,10 @@ def get_chosen_time(message, reserve_day):
 
 def get_reservation_time(message, reservation_time):
     row = get_client_id()
-    conn = engine.connect()
-    ins = clients.update().where(clients.c.client_id == row[len(row) - 1][0]).values(reservation_time=reservation_time)
-    conn.execute(ins)
+
+    session.query(Clients).filter(Clients.client_id == row).\
+        update({Clients.reservation_time: reservation_time}, synchronize_session=False)
+    session.commit()
 
     back_to_menu_markup = types.InlineKeyboardMarkup()
     back_to_menu_markup.add(types.InlineKeyboardButton(text="Вернуться в меню", callback_data="back_to_menu"))
