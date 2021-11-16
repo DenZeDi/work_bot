@@ -322,9 +322,9 @@ def get_reservation_time(message, reservation_time):
 
 def menu_picture(message):
     bot.send_message(message.chat.id, "Меню")
-    bot.send_photo(message.chat.id, photo=open(r"images\2.jpg", 'rb'))
-    bot.send_photo(message.chat.id, photo=open(r"images\3.jpg", 'rb'))
-    bot.send_photo(message.chat.id, photo=open(r"images\5.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"2.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"3.jpg", 'rb'))
+    bot.send_photo(message.chat.id, photo=open(r"5.jpg", 'rb'))
     back_to_menu(message)
 
 

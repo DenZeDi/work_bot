@@ -2,7 +2,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, Column, Integer, String
 
-engine = create_engine('sqlite:///hookah.db', echo=True)
+engine = create_engine('postgresql+psycopg2://hookah:password@localhost/hookah', echo=True)
 
 Base = declarative_base()
 
